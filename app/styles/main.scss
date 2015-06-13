@@ -85,9 +85,21 @@ svg {
 }
 
 .brush .extent {
-  stroke: #fff;
-  fill-opacity: .125;
+  stroke: #ebebeb;
+  fill: #ebebeb;
+  fill-opacity: .425;
   shape-rendering: crispEdges;
+}
+
+.x.axis {
+  .tick line {
+    stroke: none;
+    fill: none;
+  }
+  .domain {
+    stroke: none;
+    fill: green;
+  }
 }
 
 .event {
