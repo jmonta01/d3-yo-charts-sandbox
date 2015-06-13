@@ -28,14 +28,15 @@ angular.module('sandboxApp')
             svg, brush,
             chartContainer, chartXAxis,
             brushContainer, brushXAxis,
-            tickHeight = 20, tickWidth = 5,
-            miniTickHeight = 5, miniTickWidth = 2;
+            tickHeight = 20, tickWidth = 5, tickYSpacer = 2,
+            miniTickHeight = 5, miniTickWidth = 2, miniTickYSpacer = 1;
 
         //ticks area
         var chartConfig = {
-          margin: {top: 10, right: 10, bottom: 50, left: 10},
+          margin: {top: 10, right: 10, bottom: 30, left: 10},
           width: 960,
-          height: 60
+          height: 60,
+          axisHeight: 20
         } ;
         chartConfig.xScale = d3.time.scale().range([0, chartConfig.width]);
 
@@ -43,15 +44,20 @@ angular.module('sandboxApp')
         var brushConfig = {
           margin: {top: 100, right: 10, bottom: 10, left: 10},
           width: 960,
-          height: 30
+          height: 30,
+          axisHeight: 20
         };
         brushConfig.xScale = d3.time.scale().range([0, brushConfig.width]);
 
-        function init () {
+        function init (data) {
           inited = true;
 
+          chartConfig.height = data.length * tickHeight + data.length * tickYSpacer;
+          brushConfig.height = data.length * miniTickHeight + data.length * miniTickYSpacer;
+          brushConfig.margin.top = chartConfig.height + chartConfig.margin.top + chartConfig.margin.bottom + chartConfig.axisHeight;
+
           var totalWidth = chartConfig.width + chartConfig.margin.left + chartConfig.margin.right;
-          var totalHeight = chartConfig.margin.top + chartConfig.height + chartConfig.margin.bottom + brushConfig.height + brushConfig.margin.bottom;
+          var totalHeight = brushConfig.margin.top + brushConfig.height + brushConfig.margin.bottom + brushConfig.axisHeight;
 
           svg = d3.select(element[0]).append("svg")
             .attr("width",  totalWidth)
@@ -91,11 +97,11 @@ angular.module('sandboxApp')
             .on("brush", brushed);
         }
 
-        function redraw (brushing) {
+        function redraw (data, brushing) {
           if (!processedData || !scope.minDomainStart || !scope.minDomainEnd || !scope.domainStart || !scope.domainEnd ) return;
-          if (!inited) init();
+          if (!inited) init(data);
           configure(brushing);
-          render(processedData);
+          render(data);
         }
 
         function configure (brushing) {
@@ -126,21 +132,32 @@ angular.module('sandboxApp')
             .attr("y", -6)
             .attr("height", brushConfig.height + 7);
 
-          brushContainer.selectAll("rect.event").remove();
-          brushContainer.selectAll("rect.event")
+          brushContainer.selectAll("g.track").remove();
+          brushContainer.selectAll("g.track")
             .data(data).enter()
-              .append("rect")
-                .attr('class', 'event')
-                .attr("x", function (d) {
-                  return brushConfig.xScale(moment(d.segment_start));
-                })
-                .attr("width", miniTickWidth)
-                .attr("height", miniTickHeight);
+            .append("g")
+            .attr("class", "track")
+              .selectAll("rect.event")
+                .data(function(d) { return d; }).enter()
+                .append("rect")
+                  .attr('class', 'event')
+                  .attr("y", function (d, i, j) {
+                    return j * miniTickHeight + (j > 0 ? miniTickYSpacer : 0);
+                  })
+                  .attr("x", function (d) {
+                    return brushConfig.xScale(moment(d.segment_start));
+                  })
+                  .attr("width", miniTickWidth)
+                  .attr("height", miniTickHeight);
 
 
-          chartContainer.selectAll("rect.event").remove();
-          chartContainer.selectAll("rect.event")
+          chartContainer.selectAll("g.track").remove();
+          chartContainer.selectAll("g.track")
             .data(data).enter()
+            .append("g")
+              .attr("class", "track")
+              .selectAll("rect.event")
+              .data(function(d) { return d; }).enter()
               .append("rect")
                 .filter(function(d) {
                   return moment(d.segment_start).isBetween(moment(chartConfig.xScale.domain()[0]), moment(chartConfig.xScale.domain()[1]));
@@ -155,6 +172,9 @@ angular.module('sandboxApp')
                 .attr("title", function (d) {
                   return ''; //'<p><span>Event Type:</span> ' + scope.dqlSymbolEventMap[d.dqlSymbol].object_name + '</p>' + '<p><span>Start:</span> ' + d.segment_start + '</p>' + '<p><span>End:</span> ' + d.segment_end + '</p>';
                 })
+                .attr("y", function (d, i, j) {
+                  return j * tickHeight + (j > 0 ? tickYSpacer : 0);
+                })
                 .attr("x", function (d) {
                   return chartConfig.xScale(moment(d.segment_start));
                 })
@@ -163,33 +183,34 @@ angular.module('sandboxApp')
         }
 
         function brushed() {
-          redraw(true);
+          redraw(processedData, true);
         }
 
         scope.$watch('minDomainStart', function () {
-          redraw();
+          redraw(processedData);
         }, true);
 
         scope.$watch('minDomainEnd', function () {
-          redraw();
+          redraw(processedData);
         }, true);
 
         scope.$watch('domainStart', function () {
           console.log('domainStart:changed');
-          redraw();
+          redraw(processedData);
         }, true);
 
         scope.$watch('domainEnd', function () {
           console.log('domainEnd:changed');
-          redraw();
+          redraw(processedData);
         }, true);
 
         scope.$watch('data', function (data) {
+          inited = false;
           processedData = data;
-          dataMean = d3.mean(processedData, function (d) {
+          dataMean = d3.mean( _.flatten(processedData, true), function (d) {
             return d.segment_start;
           });
-          redraw();
+          redraw(processedData);
         });
 
       }
