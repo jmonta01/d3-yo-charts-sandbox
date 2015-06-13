@@ -25,40 +25,42 @@ angular.module('sandboxApp')
       link: function(scope, element, attrs) {
 
         var inited = false,
+            w = element.parent().width(),
             processedData, dataMean,
             svg, brush,
-            chartContainer, chartXAxis,
-            brushContainer, brushXAxis,
-            tickHeight = 20, tickWidth = 5, tickYSpacer = 2,
+            chartContainer, chartEventHeaders, chartEventsContainer, chartXAxis,
+            brushContainer, brushEventsContainer, brushXAxis,
+            tickHeaderWidth = 68,
+            tickHeight = 58, minTickWidth = 10, tickWidth = minTickWidth, tickYSpacer = 2,
             miniTickHeight = 5, miniTickWidth = 2, miniTickYSpacer = 1;
 
         //ticks area
         var chartConfig = {
-          margin: {top: 10, right: 10, bottom: 30, left: 10},
-          width: 960,
+          margin: {top: 10, right: 100, bottom: 10, left: 100},
           height: 60,
           axisHeight: 20
         } ;
+        chartConfig.width = w - chartConfig.margin.left - chartConfig.margin.right;
         chartConfig.xScale = d3.time.scale().range([0, chartConfig.width]);
 
         //brush area
         var brushConfig = {
-          margin: {top: 100, right: 10, bottom: 10, left: 10},
-          width: 960,
+          margin: {top: 10, right: 100, bottom: 10, left: 100},
           height: 30,
           axisHeight: 20
         };
+        brushConfig.width = w - brushConfig.margin.left - brushConfig.margin.right;
         brushConfig.xScale = d3.time.scale().range([0, brushConfig.width]);
 
         function init (data) {
           inited = true;
 
-          chartConfig.height = data.length * tickHeight + data.length * tickYSpacer;
           brushConfig.height = data.length * miniTickHeight + data.length * miniTickYSpacer;
-          brushConfig.margin.top = chartConfig.height + chartConfig.margin.top + chartConfig.margin.bottom + chartConfig.axisHeight;
+          chartConfig.height = data.length * tickHeight + data.length * tickYSpacer;
+          chartConfig.margin.top = brushConfig.height + brushConfig.margin.top + brushConfig.margin.bottom;
 
           var totalWidth = chartConfig.width + chartConfig.margin.left + chartConfig.margin.right;
-          var totalHeight = brushConfig.margin.top + brushConfig.height + brushConfig.margin.bottom + brushConfig.axisHeight;
+          var totalHeight = chartConfig.margin.top + chartConfig.height + chartConfig.margin.bottom + chartConfig.axisHeight;
 
           svg = d3.select(element[0]).append("svg")
             .attr("width",  totalWidth)
@@ -77,8 +79,15 @@ angular.module('sandboxApp')
           chartXAxis = d3.svg.axis().scale(chartConfig.xScale).orient("bottom");
           chartContainer.append("g")
             .attr("class", "x axis")
-            .attr("transform", "translate(0," + chartConfig.height + ")")
+            .attr("transform", "translate(" + 0 + "," + chartConfig.height + ")")
             .call(chartXAxis);
+
+          chartEventHeaders = chartContainer.append("g")
+            .attr("class", "chart-event-headers")
+            .attr("transform", "translate(" + -tickHeaderWidth + ",0)");
+
+          chartEventsContainer = chartContainer.append("g")
+            .attr("class", "chart-events-container");
 
           brushContainer = svg.append("g")
             .attr("class", "brush-container")
@@ -86,9 +95,12 @@ angular.module('sandboxApp')
 
           brushXAxis = d3.svg.axis().scale(brushConfig.xScale).orient("bottom");
           brushContainer.append("g")
-            .attr("class", "x axis")
+            .attr("class", "x axis hidden")
             .attr("transform", "translate(0," + brushConfig.height + ")")
             .call(brushXAxis);
+
+          brushEventsContainer = brushContainer.append("g")
+            .attr("class", "brush-events-container")
 
           brushContainer.append("g")
             .attr("class", "x brush");
@@ -103,6 +115,18 @@ angular.module('sandboxApp')
           if (!inited) init(data);
           configure(brushing);
           render(data);
+        }
+
+        function calculateTickWidth () {
+          var focusStart = moment(chartConfig.xScale.domain()[0]);
+          var focusEnd = moment(chartConfig.xScale.domain()[1]);
+          var focusDiff = focusEnd.diff(focusStart, "seconds");
+
+          var brushStart = moment(brushConfig.xScale.domain()[0]);
+          var brushEnd = moment(brushConfig.xScale.domain()[1]);
+          var brushDiff = brushEnd.diff(brushStart, "seconds");
+
+          tickWidth = Math.max(parseInt(brushDiff / focusDiff), minTickWidth);
         }
 
         function configure (brushing) {
@@ -124,6 +148,7 @@ angular.module('sandboxApp')
             chartConfig.xScale.domain(brush.empty() ? brushConfig.xScale.domain() : brush.extent());
             chartContainer.select("g.x.axis").call(chartXAxis);
           }
+          calculateTickWidth();
         }
 
         function render (data) {
@@ -133,8 +158,8 @@ angular.module('sandboxApp')
             .attr("y", -6)
             .attr("height", brushConfig.height + 7);
 
-          brushContainer.selectAll("g.track").remove();
-          brushContainer.selectAll("g.track")
+          brushEventsContainer.selectAll("g.track").remove();
+          brushEventsContainer.selectAll("g.track")
             .data(data).enter()
             .append("g")
             .attr("class", "track")
@@ -152,8 +177,20 @@ angular.module('sandboxApp')
                   .attr("height", miniTickHeight);
 
 
-          chartContainer.selectAll("g.track").remove();
-          chartContainer.selectAll("g.track")
+          chartEventHeaders.selectAll("rect.event-header").remove();
+          chartEventHeaders.selectAll("rect.event-header")
+            .data(data).enter()
+            .append("rect")
+              .attr("class", "event-header")
+              .attr("width", tickHeaderWidth)
+              .attr("height", tickHeight)
+              .style("fill", "#ff0000")
+              .attr("y", function (d, i) {
+                return i * tickHeight + (i > 0 ? tickYSpacer : 0);
+              });
+
+          chartEventsContainer.selectAll("g.track").remove();
+          chartEventsContainer.selectAll("g.track")
             .data(data).enter()
             .append("g")
               .attr("class", "track")
@@ -183,8 +220,65 @@ angular.module('sandboxApp')
                   return chartConfig.xScale(moment(d.segment_start));
                 })
                 .attr("width", tickWidth)
-                .attr("height", tickHeight);
+                .attr("height", tickHeight)
+                .on("mouseenter", function (){
+                  $(this).tooltip("show");
+                })
+              .on("mouseout", function (event){
+                $(this).tooltip("hide")
+              })
+              .on("click", timelineEventClick)
+              //.call(drag)
+              //.call(zoom);
+
+          $(".tooltip-me").tooltip({
+            html: true,
+            placement: 'top',
+            container: '.timeline-widget'
+          })
+
         }
+
+        function timelineEventClick (d) {
+          console.log('event click', d)
+          var eventModalInstance;
+          /*
+          eventModalInstance = $modal.open({
+            templateUrl: "views/content/timeline/timeline-journey-event-info-modal.html",
+            controller: "timelineJourneyEventInfoModalCtrl",
+            backdrop: 'static',
+            keyboard: false,
+            resolve: {
+              visualizationEvent: function() {
+                return d;
+              },
+              eventName: function() {
+                return scope.getEventNameFromDqlSymbol(d.dqlSymbol);
+              },
+              dqlEventTypeName: function() {
+                return scope.getDqlEventTypeFromDqlSymbol(d.dqlSymbol);
+              },
+              eventIcon: function() {
+                return scope.getEventIconFromDqlSymbol(d.dqlSymbol);
+              },
+              timelineIntegrationTypes: function() {
+                return scope.getTimelineIntegrationTypesFromDqlSymbol(d.dqlSymbol);
+              },
+              attributes: function() {
+                return scope.getAttributesFromDqlSymbol(d.dqlSymbol);
+              },
+              dqlSymbol: function() {
+                return d.dqlSymbol;
+              }
+            }
+          });
+          return eventModalInstance.result.then(function(response) {}, function(error) {
+            if (error !== 'cancel') {
+              return console.warn(error);
+            }
+          });
+          */
+        };
 
         function brushed() {
           redraw(processedData, true);
