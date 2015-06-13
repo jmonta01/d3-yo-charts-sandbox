@@ -19,6 +19,7 @@ angular.module('sandboxApp')
         domainStart: '=',
         minDomainEnd: '=',
         domainEnd: '=',
+        getColorFromDqlSymbol: '&'
       },
       template: "<div></div>",
       link: function(scope, element, attrs) {
@@ -169,9 +170,12 @@ angular.module('sandboxApp')
                     return "event moveable tooltip-me";
                   }
                 })
-                .attr("title", function (d) {
-                  return ''; //'<p><span>Event Type:</span> ' + scope.dqlSymbolEventMap[d.dqlSymbol].object_name + '</p>' + '<p><span>Start:</span> ' + d.segment_start + '</p>' + '<p><span>End:</span> ' + d.segment_end + '</p>';
+                .style("fill", function(d) {
+                  return scope.getColorFromDqlSymbol(d.dqlSymbol)
                 })
+                .attr("title", function (d) {
+                        return ''; //'<p><span>Event Type:</span> ' + scope.dqlSymbolEventMap[d.dqlSymbol].object_name + '</p>' + '<p><span>Start:</span> ' + d.segment_start + '</p>' + '<p><span>End:</span> ' + d.segment_end + '</p>';
+                      })
                 .attr("y", function (d, i, j) {
                   return j * tickHeight + (j > 0 ? tickYSpacer : 0);
                 })
@@ -186,21 +190,11 @@ angular.module('sandboxApp')
           redraw(processedData, true);
         }
 
-        scope.$watch('minDomainStart', function () {
-          redraw(processedData);
-        }, true);
+        //scope.$watchCollection('[minDomainStart, minDomainEnd, domainStart, domainEnd]', function () {
+        //  redraw(processedData);
+        //}, true);
 
-        scope.$watch('minDomainEnd', function () {
-          redraw(processedData);
-        }, true);
-
-        scope.$watch('domainStart', function () {
-          console.log('domainStart:changed');
-          redraw(processedData);
-        }, true);
-
-        scope.$watch('domainEnd', function () {
-          console.log('domainEnd:changed');
+        scope.$watchGroup(["minDomainStart", "minDomainEnd", "domainStart", "domainEnd"], function () {
           redraw(processedData);
         }, true);
 
