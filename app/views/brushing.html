@@ -1,0 +1,30 @@
+<brushing-chart data="data" min-domain-start="minDomainStart" min-domain-end="minDomainEnd" domain-start="domainStart" domain-end="domainEnd"></brushing-chart>
+<div class="row" style="margin: 20px;">
+  <div class="col-xs-4">
+    <select class="form-control" ng-model="unit">
+      <option value="years">Year</option>
+      <option value="months">Month</option>
+      <option value="weeks">Week</option>
+      <option value="days">Day</option>
+    </select>
+  </div>
+  <div class="col-xs-4">
+    <button class="btn btn-default" ng-click="domainStartDown()"><</button>
+    {{domainStart.format('M/D/YY HH:mm:ss')}}
+    <button class="btn btn-default" ng-click="domainStartUp()">></button>
+  </div>
+  <div class="col-xs-4">
+    <button class="btn btn-default" ng-click="domainEndDown()"><</button>
+    {{domainEnd.format('M/D/YY HH:mm:ss')}}
+    <button class="btn btn-default" ng-click="domainEndUp()">></button>
+  </div>
+</div>
+<div class="row" style="margin: 20px;">
+  <div class="col-xs-12">
+    <button class="btn btn-default" ng-click="domainToDefault()">Default</button>
+    <button class="btn btn-default" ng-click="domainToYears()">Years</button>
+    <button class="btn btn-default" ng-click="domainToMonths()">Months</button>
+    <button class="btn btn-default" ng-click="domainToWeeks()">Weeks</button>
+    <button class="btn btn-default" ng-click="domainToDays()">Days</button>
+  </div>
+</div>
