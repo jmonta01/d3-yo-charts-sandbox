@@ -30,7 +30,6 @@ angular.module('sandboxApp')
             svg, brush,
             chartContainer, chartEventHeaders, chartEventsContainer, chartXAxis,
             brushContainer, brushEventsContainer, brushXAxis,
-            tickHeaderWidth = 68,
             tickHeight = 58, minTickWidth = 10, tickWidth = minTickWidth, tickYSpacer = 2,
             miniTickHeight = 5, miniTickWidth = 2, miniTickYSpacer = 1;
 
@@ -42,6 +41,11 @@ angular.module('sandboxApp')
         } ;
         chartConfig.width = w - chartConfig.margin.left - chartConfig.margin.right;
         chartConfig.xScale = d3.time.scale().range([0, chartConfig.width]);
+
+        var tickHeaderConfig = {
+          margin: {top: 0, right: 20, bottom: 0, left: 0},
+          width: 68
+        };
 
         //brush area
         var brushConfig = {
@@ -84,7 +88,7 @@ angular.module('sandboxApp')
 
           chartEventHeaders = chartContainer.append("g")
             .attr("class", "chart-event-headers")
-            .attr("transform", "translate(" + -tickHeaderWidth + ",0)");
+            .attr("transform", "translate(" + -(tickHeaderConfig.width + tickHeaderConfig.margin.left + tickHeaderConfig.margin.right) + ",0)");
 
           chartEventsContainer = chartContainer.append("g")
             .attr("class", "chart-events-container");
@@ -182,9 +186,10 @@ angular.module('sandboxApp')
             .data(data).enter()
             .append("rect")
               .attr("class", "event-header")
-              .attr("width", tickHeaderWidth)
+              .attr("width", tickHeaderConfig.width)
               .attr("height", tickHeight)
               .style("fill", "#ff0000")
+              .attr("x", tickHeaderConfig.margin.left)
               .attr("y", function (d, i) {
                 return i * tickHeight + (i > 0 ? tickYSpacer : 0);
               });
